@@ -1,6 +1,6 @@
 # Factory Design Pattern Practice Questions
 
-## ✅ **Conceptual Questions**
+## 📌 **Conceptual Questions**
 1. What is the Factory Design Pattern, and why is it categorized as a Creational Design Pattern?
 2. What is the main difference between Factory Method Pattern and Abstract Factory Pattern?
 3. When would you choose to use the Factory Pattern instead of creating objects directly with new?
@@ -22,7 +22,7 @@
 19. Can you explain how Factory Pattern can be used with Singleton Pattern to create Singleton objects?
 20. What are some common mistakes developers make when implementing the Factory Pattern?
 
-## ✅ **Practical Questions**
+## 📌 **Practical Questions**
 1.  **Basic Factory Pattern:**
     * Create a `Vehicle` interface with a `drive()` method.
     * Implement two concrete classes, `Car` and `Bike`, that implement the `Vehicle` interface.

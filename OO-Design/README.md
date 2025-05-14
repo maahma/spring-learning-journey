@@ -363,7 +363,285 @@ public class Main {
 
 
 ### SOLID Principles
+- Design principles in general encourage us to write better software, more maintainable, understandable, and flexible
+- **S.O.L.I.D** is an acronym for 5 fundamental design principles for writing clean, maintainable and scalable code introduced by Robert C. Martin
+- It stands for:
+	1. **S**ingle Responsibility Principle
+	2. **O**pen Closed Principle
+	3. **L**iskov Substitution Principle
+	4. **I**nterface Segregation Principle
+	5. **D**ependency Inversion Principle
 
+#### **Single Responsibility Principle**
+- This principle states that a class should have only one reason to change
+- This means a class should do one thing and do it well. This makes it easier to maintain.
+
+##### Bad Practice
+```java
+class UserManager {
+	public void UserManager() {
+		// Code to create user
+	}
+
+	public void sendEmail() {
+		// Code to send email
+	}
+}
+```
+- `UserManager` is handling two responsibilities:
+	- Managing users
+	- Sending emails
+
+##### Good Practice
+```java
+class UserManager {
+	public void createUser() {
+		// Code to create user
+	}
+}
+
+class EmailService {
+	public void sendEmail() {
+		// Code to send email
+	}
+}
+```
+
+- Each class has a single responsibility
+
+#### **Open/Closed Principle (OCP)**
+
+- A class should be open for extension but closed for modification so you should be able to add new functionality without changing existing code
+
+##### Bad Practice
+```java
+class PaymentProcessor {
+	public void process(String type){
+		if (type.equals("CreditCard")){
+			// Process credit card
+		} else if (type.equals("Paypal")){
+			// Process Paypal
+		}
+	}
+}
+```
+- Every time a new payment is added, this class must be modified
+
+##### Good Practice
+```java
+interface PaymentMethod{
+	void pay();
+}
+
+class CreditCardPayment implements PaymentMethod {
+	public void pay() {
+		System.out.println("Processing credit card payment")
+	}
+}
+
+class PayPalPayment implements PaymentMethod {
+    public void pay() {
+        System.out.println("Processing PayPal Payment");
+    }
+}
+
+class PaymentProcessor {
+    public void process(PaymentMethod method) {
+        method.pay();
+    }
+}
+```
+- New payment methods can be added without changing `PaymentProcessor`
+
+#### **Liskov Substitution Principle (LSP)**
+* This principle states that subtypes must be substitutable for their base types without altering the correctness of the program.
+* In simpler terms, if a class Parent is replaced with a class Child, the program should still work without any issues.
+* Violating LSP can cause unexpected behavior when using subclasses.
+
+##### Bad Practice
+```java
+class Bird {
+    public void fly() {
+        System.out.println("Flying...");
+    }
+}
+
+class Ostrich extends Bird {
+    @Override
+    public void fly() {
+        throw new UnsupportedOperationException("Ostrich can't fly");
+    }
+}
+
+public class Main {
+    public static void main(String[] args) {
+        Bird myBird = new Ostrich();
+        myBird.fly(); // Throws exception - Violates LSP
+    }
+}
+
+```
+- Here, `Ostrich` is a type of `Bird`, but it cannot fly. This violates the LSP because `Ostrich` cannot fully substitute `Bird` without causing an error.
+
+##### Good Practice
+```java
+// Base Interface
+interface Bird {
+    void eat();
+}
+
+// Subtypes
+interface FlyingBird extends Bird {
+    void fly();
+}
+
+class Sparrow implements FlyingBird {
+    public void eat() {
+        System.out.println("Sparrow eating...");
+    }
+
+    public void fly() {
+        System.out.println("Sparrow flying...");
+    }
+}
+
+class Ostrich implements Bird {
+    public void eat() {
+        System.out.println("Ostrich eating...");
+    }
+}
+
+```
+- Here, `Ostrich` is a `Bird`, but it is not a `FlyingBird`, so it avoids the problem of trying to force `Ostrich` to fly.
+
+#### **Interface Segregation Principle (ISP)**
+- This principle states that no client should be forced to depend on methods it does not use.
+- In other words, create smaller, more specific interfaces instead of one large interface.
+- This makes classes more flexible and prevents them from having unnecessary dependencies.
+
+##### Bad Practice
+```java
+interface Worker {
+    void work();
+    void eat();
+}
+
+class HumanWorker implements Worker {
+    public void work() {
+        System.out.println("Human is working");
+    }
+
+    public void eat() {
+        System.out.println("Human is eating");
+    }
+}
+
+class RobotWorker implements Worker {
+    public void work() {
+        System.out.println("Robot is working");
+    }
+
+    // Unnecessary method for robots
+    public void eat() {
+        throw new UnsupportedOperationException("Robot doesn't eat");
+    }
+}
+
+```
+- The `RobotWorker` is forced to implement an `eat()` method that it does not need
+##### Good Practice
+```java
+interface Workable {
+    void work();
+}
+
+interface Eatable {
+    void eat();
+}
+
+class HumanWorker implements Workable, Eatable {
+    public void work() {
+        System.out.println("Human is working");
+    }
+
+    public void eat() {
+        System.out.println("Human is eating");
+    }
+}
+
+class RobotWorker implements Workable {
+    public void work() {
+        System.out.println("Robot is working");
+    }
+}
+```
+- Separate interfaces allow each class to only implement what it needs
+#### **Dependency Inversion Principle (DIP)**
+- This principle states that high-level modules should not depend on low-level modules. Both should depend on abstractions.
+- It also means abstractions should not depend on details. Details should depend on abstractions.
+- In simpler terms, your classes should depend on interfaces or abstract classes, not on concrete implementations.
+##### Bad Practice
+```java
+class LightBulb {
+    public void turnOn() {
+        System.out.println("Light Bulb turned on");
+    }
+}
+
+class Switch {
+    private LightBulb lightBulb = new LightBulb();
+
+    public void press() {
+        lightBulb.turnOn();
+    }
+}
+```
+- Here, the `Switch` is directly dependent on `LightBulb`. If we need to switch to a `LEDLight` or another type, we must modify the `Switch` class.
+##### Good Practice
+```java
+// Abstraction (Interface)
+interface Switchable {
+    void turnOn();
+}
+
+// Concrete Implementations
+class LightBulb implements Switchable {
+    public void turnOn() {
+        System.out.println("Light Bulb turned on");
+    }
+}
+
+class Fan implements Switchable {
+    public void turnOn() {
+        System.out.println("Fan turned on");
+    }
+}
+
+// High-level Module
+class Switch {
+    private Switchable device;
+
+    public Switch(Switchable device) {
+        this.device = device;
+    }
+
+    public void press() {
+        device.turnOn();
+    }
+}
+
+// Usage
+public class Main {
+    public static void main(String[] args) {
+        Switch lightSwitch = new Switch(new LightBulb());
+        lightSwitch.press(); // Light Bulb turned on
+
+        Switch fanSwitch = new Switch(new Fan());
+        fanSwitch.press(); // Fan turned on
+    }
+}
+```
+- The `Switch` depends on an abstraction (`Switchable`), not a concrete class. This makes it more flexible
 
 
 ## Practice Questions
