@@ -57,7 +57,7 @@
     9. **Template Method Pattern:** Defines the skeleton of an algorithm, allowing subclasses to change certain steps
     10. **Visitor Pattern:** Allows adding new operations to a class hierarchy without modifying the classes
 
-## Common Design Patterns used in Spring
+# Common Design Patterns used in Spring
 - Singleton Pattern
 - Factory Pattern
 - Dependency Injection
