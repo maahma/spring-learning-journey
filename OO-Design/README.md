@@ -161,7 +161,7 @@ class Square implements Drawable {
 }
 ```
 
-#### **Key characteristics** 
+#### **Key characteristics of Interfaces** 
 - The interface in Java is a mechanism to achieve abstraction
 - By default, variables in an interface are public, static, and final
 - It is used to achieve abstraction and multiple inheritance in Java
@@ -306,6 +306,60 @@ public class Main {
 ```
 
 ### Composition
+**Definition**: Composition is a design principle in object-oriented programming (OOP) where one class is composed of one or more objects of other classes, establishing a **"has-a"** relationship. It is a form of object association where one class contains references to one or more other classes.
+
+**Purpose**: 
+- It enables **code reuse** without relying on inheritance, making the code more flexible and maintainable.
+- It supports the concept of **"prefer composition over inheritance,"** which is a best practice in OOP because it avoids the complexity of deep inheritance hierarchies.
+- The classes involved in composition are independent, avoiding the problems of tight coupling seen in inheritance
+- It provides **loose coupling** between classes, as changes in one class do not directly affect the other.
+
+**How it works**: 
+- In Java, composition is implemented by declaring one or more fields of another class type within a class.
+- The contained class (part) can be an instance variable of the container class (whole).
+- The container class can use the methods of the contained class through its instance.
+	
+##### **Example**
+```java
+// Part class (Engine)
+class Engine {
+    private String type;
+
+    public Engine(String type) {
+        this.type = type;
+    }
+
+    public void start() {
+        System.out.println("Engine of type " + type + " is starting.");
+    }
+}
+
+// Whole class (Car) - Composition with Engine
+class Car {
+    private String model;
+    private Engine engine; // Car "has-an" Engine
+
+    public Car(String model, Engine engine) {
+        this.model = model;
+        this.engine = engine;
+    }
+
+    public void startCar() {
+        System.out.println("Starting the car: " + model);
+        engine.start(); // Using the Engine object
+    }
+}
+
+// Main class to demonstrate composition
+public class Main {
+    public static void main(String[] args) {
+        Engine v8Engine = new Engine("V8");
+        Car myCar = new Car("Mustang", v8Engine);
+        
+        myCar.startCar();
+    }
+}
+```
 
 
 ### SOLID Principles
@@ -456,11 +510,30 @@ public class Main {
     - Why is composition preferred over inheritance in certain cases?
         
 2. **Practical Tasks:**
-    - Create a `Person` class with fields like `name` and `age`.
-    - Create a `Job` class with fields like `jobTitle` and `salary`.
-    - Use composition to make `Person` have a `Job` object instead of inheriting it.
-    - Demonstrate how changing the `Job` object does not affect the `Person` class.
-        
+    1. Create a `Library` class that can contain multiple `Book` objects. Each `Book` should have properties like `title`, `author`, and `ISBN`. Write methods in the Library class to:
+        - Add a new book.
+        - Display all books in the library.
+        - Remove a book by its ISBN.
+
+    2. Design a `Computer` class that uses composition with the following parts:
+        - A `Processor` class with details like `brand` and `speed` (GHz).
+        - A `Memory` class with `capacity` (GB) and `type` (e.g., DDR4).
+        - A `Storage` class with `type` (HDD or SSD) and `size` (GB).
+        - The Computer class should be able to display the complete specification of the computer.
+
+    3. Create a `House` class that has the following composed classes:
+        - `Room` (with properties like `roomType` - Bedroom, Kitchen, etc.).
+        - `Address` (with properties like `street`, `city`, and `postalCode`).
+        - The `House` class should be able to:
+            - Add multiple rooms.
+            - Display all rooms and the address of the house.
+
+    4. Design an `Order` class that is composed of multiple `Product` objects.
+        - Each Product should have properties like `name`, `price`, and `quantity`.
+        - The `Order` class should be able to:
+            - Add a product to the order.
+            - Calculate the total price of the order.
+            - Display all products in the order with their details.
 ---
 
 ### **SOLID Principles**
