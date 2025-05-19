@@ -1,9 +1,14 @@
-# Spring Mini Projects
+# Spring Learning Journey
 This repository contains my notes for learning the Spring Framework, as well as key concepts related to Object-Oriented Design, Design Patterns, and Software Architecture.
 
- It also includes mini-projects that I will develop as I progress through the course: [Java Spring Framework 6 with Spring Boot 3 with Telusko](https://www.udemy.com/course/spring-5-with-spring-boot-2/?utm_source=adwords&utm_medium=udemyads&utm_campaign=Search_DSA_Beta_Prof_la.EN_cc.ROW-English&campaigntype=Search&portfolio=ROW-English&language=EN&product=Course&test=&audience=DSA&topic=&priority=Beta&utm_content=deal4584&utm_term=_._ag_162511579404_._ad_696197165418_._kw__._de_c_._dm__._pl__._ti_dsa-1677053911088_._li_1011084_._pd__._&matchtype=&gad_source=1&gbraid=0AAAAADROdO2JM4w-2M8wwUPLsABvy9BwE&gclid=Cj0KCQjwnui_BhDlARIsAEo9GutdTjumZ37w3xKiRZuphfyeIRt7q1s0gkKSZw25jHZfWzZKxTN-7U8aArWKEALw_wcB&couponCode=2021PM20)
+ It also includes mini-projects that I will develop to learn Spring
+ 
+ I'm following these 2 resources:
+ 1. [Java Spring Framework 6 with Spring Boot 3 with Telusko](https://www.udemy.com/course/spring-5-with-spring-boot-2/?utm_source=adwords&utm_medium=udemyads&utm_campaign=Search_DSA_Beta_Prof_la.EN_cc.ROW-English&campaigntype=Search&portfolio=ROW-English&language=EN&product=Course&test=&audience=DSA&topic=&priority=Beta&utm_content=deal4584&utm_term=_._ag_162511579404_._ad_696197165418_._kw__._de_c_._dm__._pl__._ti_dsa-1677053911088_._li_1011084_._pd__._&matchtype=&gad_source=1&gbraid=0AAAAADROdO2JM4w-2M8wwUPLsABvy9BwE&gclid=Cj0KCQjwnui_BhDlARIsAEo9GutdTjumZ37w3xKiRZuphfyeIRt7q1s0gkKSZw25jHZfWzZKxTN-7U8aArWKEALw_wcB&couponCode=2021PM20) (Udemy course)
 
-**NOTE**: These mini-projects are self-created for additional practice and are not directly provided by the course
+2. [Spring Start Here: Learn what you need and learn it well by  Laurentiu Spilca](https://laurspilca.com/spring-start-here/) (Book)
+
+**NOTE**: These mini-projects are self-created for additional practice and are not directly provided by the course or the book
 
 ## Spring Mini Projects
 ### Spring Framework Introduction
