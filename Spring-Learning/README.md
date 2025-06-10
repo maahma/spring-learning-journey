@@ -781,3 +781,640 @@ public class ProjectConfig {
 ```
 - Without `@Qualifier`, this line would look like: `p.setParrot(parrot2)`
 - But, with `@Qualifier("parrot2")`, we explicitly tell Spring to inject the bean named `parrot2`
+
+
+### Implementing a Requirement with Plain Java
+#### Requirement
+- We need to implement a feature in an team task management app that:
+	1. Allows users to publish comments on tasks
+	2. Store the comments (e.g., in a database)
+	3. Sends the comments via email to a specific address configured in the app
+#### Design Goals
+- We need to properly define responsibilities and abstractions for this feature
+- And also, maintain loose coupling between objects to make future changes easier
+#### Object Roles and Responsibilities
+- Objects that implement business use cases are referred to as **services**  
+- Since the feature involves two distinct actions — **storing a comment** and **sending a notification** — each action will be handled by a separate object, respecting the **Single Responsibility Principle**    
+- Object that handles database operations is called a **repository** or **Data Access Object (DAO)**
+- Object that handles external communications is called a **proxy** object
+- Object that presents the type of data the app uses is called a **model** object
+#### Naming and Structure
+- For our program, we will use the following objects:
+	- `CommentService`: Orchestrates the use case (publishing a comment)
+	- `CommentRepository`: Handles storing the comment (DAO)
+	- `CommentNotificationProxy`: Handles sending the notification via email (proxy)
+	- `Comment`: Represents the comment 
+![[Pasted image 20250527165514.png]]
+#### Decoupling with Interfaces
+To make the design flexible and extensible:
+- We define `CommentRepository` and `CommentNotificationProxy` as **interfaces** rather than concrete classes.
+- This ensures that if:
+    - The storage method changes (e.g., from a database to a web service), or
+    - The notification channel changes (e.g., from email to Slack)
+- we can update the implementation **without modifying** the `CommentService`.
+- This use of interfaces helps us follow the **Open/Closed Principle** and the **Dependency Inversion Principle**, keeping the system modular and easier to maintain.
+![[Pasted image 20250527170110.png]]
+#### Project Structure and Implementation
+1) **Project Structure**  
+	- To organize the project, we divide responsibilities into separate packages:
+		- `model` for data objects
+		- `repositories` for data access logic
+		- `proxies` for external communication
+		- `services` for business logic
+	- We'll create a `Comment` class to represent a user comment, which includes two fields: the text and the author. This will be implemented as a POJO (Plain Old Java Object) — a simple class with attributes, constructors, getters, and setters, without any external dependencies.
+2) **Define the `Comment` Model**
+	```java
+	package com.example.model;
+	
+	public class Comment {
+	    private String author;
+	    private String text;
+	
+	    public void setAuthor(String author){
+	        this.author = author;
+	    }
+	
+	    public String getAuthor(){
+	        return author;
+	    }
+	
+	    public void setText(String text){
+	        this.text = text;
+	    }
+	
+	    public String getText(){
+	        return text;
+	    }
+	
+	    @Override
+	    public String toString(){
+	        return text + " by " + author;
+	    }
+	}
+	```
+
+3) **Define the `CommentRepository` Interface and Implementation**  
+	- We'll define an interface `CommentRepository` in the `repositories` package to abstract the storage mechanism. The class `DBCommentRepository` implements this interface and handles storing comments (here simply simulating the behavior with a print statement). This class will be stored in the same package
+	- The interface declares a `storeComment(Comment comment)` method, which will be used by the `CommentService` class to fulfill the storage part of the use case. It defines the contract that `CommentService` relies on to store comments.
+	```java
+	// CommentRepository.java
+	
+	package com.example.repositories;
+	import com.example.model.Comment;
+	
+	public interface CommentRepository {
+	    
+	    void storeComment(Comment comment);
+	}
+	```
+
+	```java
+	// DBCommentRepository.java
+	package com.example.repositories;
+	import com.example.model.Comment;
+	
+	public class DBCommentRepository implements CommentRepository {
+	
+	    @Override
+	    public void storeComment(Comment comment){
+	        System.out.println("Storing comment: " + comment.getText());
+	    }
+	}
+	```
+
+5) **Define the `CommentNotificationProxy` Interface and Implementation**  
+	- To handle external notifications (e.g. sending an email), we define a `CommentNotificationProxy` interface and implement it with `EmailCommentNotificationProxy` in the `proxies` package. 
+	```java
+	// CommentNotificationProxy.java
+	
+	package com.example.proxies;
+	import com.example.model.Comment;
+	
+	public interface CommentNotificationProxy {
+	
+	    void sendComment(Comment comment);
+	}
+	```
+
+	```java
+	// EmailCommentNotificationProxy.java
+	package com.example.proxies;
+	import com.example.model.Comment;
+	
+	public class EmailCommentNotificationProxy implements CommentNotificationProxy {
+	    
+	    @Override
+	    public void sendComment(Comment comment){
+	        System.out.println("Sending notification for comment " + comment.getText());
+	    }
+	}
+	```
+
+6) **Define the `CommentService` Class**  
+	- The `CommentService` class in the `services` package encapsulates the use case of publishing a comment. It depends on `CommentRepository` and `CommentNotificationProxy`, which are injected via the constructor. 
+	```java
+	// CommentService.java
+	package com.example.services;
+	import com.example.proxies.CommentNotificationProxy;
+	import com.example.repositories.CommentRepository;
+	import com.example.model.Comment;
+
+	public class CommentService {
+		// Define the dependencies as attributes of the class 
+		private final CommentNotificationProxy commentNotificationProxy;
+		private final CommentRepository commentRepository;
+
+		// Provide the dependencies when the object is built through the parameters of the constructor
+		public CommentService(CommentNotificationProxy commentNotificationProxy, CommentRepository commentRepository){
+			this.commentNotificationProxy = commentNotificationProxy;
+			this.commentRepository = commentRepository;
+		}
+
+		// The method that implements the usecase that delegates the store comment and send comment responsibilties to the dependencies
+		public void publishComment(Comment comment){
+			commentRepository.storeComment(comment);
+			commentNotificationProxy.sendComment(comment);
+		}
+	}
+	```
+
+### Implementing a requirement using Spring with dependency injection
+- We will now apply the Spring Framework to the class design we previously implemented
+- Spring enables automatic dependency injection, allowing us to work with abstractions more effectively by delegating object creation and wiring to the framework
+- When deciding which objects should be part of the Spring context (i.e., managed by Spring), we must ask: **"Does this object need to be managed by the framework?"**. The main reason to add an object to the Spring context is to allow Spring to control it and further augment it with functionalities the framework provides
+- The reasons for adding a class to the Spring context are:
+    - It has dependencies that need to be injected
+    - It is itself a dependency required by another managed class
+- In our scenario, the only object that does **not** meet either of these criteria is `Comment`, since it:
+    - Has no dependencies
+    - Is not injected anywhere as a dependency
+- All other objects in our design either require dependencies or are used as dependencies:
+    - `CommentService` — depends on both `CommentRepository` and `CommentNotificationProxy`
+    - `DBCommentRepository` — implements `CommentRepository` and is injected into `CommentService`
+    - `EmailCommentNotificationProxy` — implements `CommentNotificationProxy` and is also injected into `CommentService`
+```java
+@Component
+public class DBCommentRepository implements CommentRepository {
+
+	@Override
+	public void storeComment(Comment comment){
+		System.out.println("Storing comment: " + comment.getText());
+	}
+}
+```
+- Marking the class with the `@Component` annotation instructs Spring to instantiate the class and add an instance as a bean in its context
+```java
+@Component
+public class EmailCommentNotificationProxy implements CommentNotificationProxy {
+
+	@Override
+	public void sendComment(Comment comment){
+		System.out.println("Sending notification for comment: " + comment.getText());
+	}
+}
+```
+
+```java
+@Component
+public class CommentService{
+	private final CommentRepository commentRepository;
+	private final CommentNotificationProxy commentNotificationProxy;
+
+	public CommentService(
+		CommentRepository commentRepository,
+		CommentNotificationProxy commentNotificationProxy) {
+		this.commentRepository = commentRepository;
+		this.commentNotificationProxy = commentNotificationProxy;
+		}
+		
+	public void publishComment(Comment comment){
+		commentRepository.storeComment(comment);
+		commentNotificationProxy.sendComment(comment);
+	}
+}
+```
+- Spring uses the constructor to create the bean and injects references from its context in the parameters when creating the instance
+- Next, we need to tell Spring where to find the components in the `Configuration` class
+```java
+@Configuration
+@ComponentScan(basePackages = {"proxies","services","repositories"})
+public class ProjectConfiguration{
+}
+```
+- We use the `@ComponentScan` annotation to tell Spring in which packages it has to search for the classes annotated with stereotype annotations. It doesn't include the `model` package because that doesn't contain classes annotated with stereotype annotations
+- To test the setup, we create a `main` method. This will start the Spring context, grab the bean of type `CommentService` out of it and call the `publishComment(Comment comment)` method
+```java
+public class Main{
+	public static void main(String[] args){
+		var context = new AnnotationConfigApplicationContext(ProjectConfiguration.class);
+
+		var comment = new Comment();
+		comment.setAuthor("Maaha");
+		comment.setText("Demo comment");
+
+		var commentService = context.getBean(CommentService.class);
+		commentService.publishComment(comment);
+	}
+}
+```
+
+- Using Spring DI feature, we don't create the instance of the `CommentService` object and its dependencies ourselves and we don't make the relationship between them either
+- In a real world scenario, when we have more than 3 classes, letting Spring manage the objects and dependencies among them makes a difference as it eliminates boilerplate code which allows us to focus on what the application does
+
+
+## Bean Scopes and Life Cycle
+### Scopes
+#### Key Ideas:
+- In Spring, **scope** defines **how many instances** of a bean Spring should create and **how long they should live** within the application context
+- The 2 common scopes found in Spring apps are :
+	- `singleton` - (Default)
+		- Only **one instance** of the bean is created per Spring application context
+		- Every time the bean is requested, **the same instance** is returned
+		- Most commonly used in real-world applications for stateless services
+	- `prototype`
+		- A **new instance** of the bean is created **every time** it is requested from the Spring context
+		- Useful for stateful objects or when each usage needs a fresh instance
+
+### Singleton Scope
+#### Key Ideas:
+- In Spring, **singleton** is the **default scope** for all beans
+- It means **Spring creates only one instance** of the bean per application context
+- So, **every time the bean is injected or requested**, the **same instance** is returned
+- The bean is created **when the context is initialized** and is assigned a unique **bean ID** (typically based on the method name or class name)(unless marked with `@Lazy`)
+- However, we **can have multiple singleton instances** of the same class **if each one is registered with a different bean name** 
+
+##### **Implementation**
+- Singleton beans can be defined using either:
+	- `@Bean` (in a `@Configuration` class), or
+	- Stereotype annotations like:
+		- `@Component`
+		- `@Service` — marks business logic    
+	    - `@Repository` — marks data access objects
+- There’s **no difference in behavior** between using `@Bean` or stereotype annotations for singleton scope — both create one instance per context **by default**.
+
+##### **More Stereotype Annotations**
+- `@Service` 
+	- Marks a class as a **service layer component** i.e. it contains **business logic**
+	- Tells Spring to manage the class like a bean (just like `@Component`)
+	- Use this when the class performs logic that supports the application 
+	- For example:
+		```java
+		@Service
+		public class OrderService {
+		    public void placeOrder() {
+		        System.out.println("Order placed!");
+		    }
+		}
+		```
+- `@Repository`
+	- Handles data storage and retrieval when interacting with a database, file system etc.
+	- It plays the role of a repository in our applications architecture
+	- Marks a class as a data access object (DAO) 
+	- We use this when we want to perform CRUD operations or interact with JPA/Hibernate
+	- For example:
+		```java
+		@Repository
+		public class OrderRepository {
+		    public void saveOrder(Order order) {
+		        System.out.println("Saving order to DB...");
+		    }
+		}
+		```
+##### **Important Considerations**
+- The **singleton scope** assumes that **multiple components of the application will share the same object instance**, so it is important that these beans are **stateless or immutable** to avoid unwanted side effects
+- In real-world applications—especially web applications—**multiple threads can access the same singleton bean simultaneously**. If these threads modify the bean’s state, it can result in a **race condition**
+- A **race condition** occurs when two or more threads attempt to change a shared resource at the same time, leading to **unpredictable behavior**. To prevent this, developers would need to use **synchronization**, which singleton beans are **not designed for**
+- The safest way to prevent such issues is to make singleton beans **immutable**, and **constructor injection** is a good practice to help enforce immutability
+
+##### **Eager vs Lazy Instantiation**
+- There are two main instantiation strategies in Spring for singleton beans:
+	- **Eager instantiation** _(default)_
+	- **Lazy instantiation**
+
+1. **Eager Instantiation**
+	- Eager instantiation is the default behavior in Spring
+	- This means that all singleton beans are created as soon as the application context is initialized
+
+2. **Lazy Instantiation**
+	- With lazy instantiation, Spring delays the creation of a singleton bean until it is first requested
+	- To enable this behavior, we annotate the bean with `@Lazy`:
+		```java
+		@Lazy
+		@Service
+		public class PaymentService {
+		    // ...
+		}
+		```
+##### **When to Use Which?**
+- In most cases, **eager instantiation is preferred**, because:
+    - It ensures that all required beans are created and available **at startup**, avoiding potential runtime errors
+    - It simplifies dependency management: if one bean depends on another, Spring can ensure the dependent bean already exists
+    - Any errors during bean creation are discovered **early**, when the application starts, rather than at runtime when the bean is first accessed
+- Lazy instantiation can be useful in **large monolithic applications** or when you want to **optimize startup time** by delaying the creation of heavyweight or rarely used beans 
+
+#### 💻 Code Snippet :
+##### 🔸 **General Singleton Pattern in Plain Java:**
+```java
+public class CommentService{
+
+	public static CommentService getInstance(){
+		if (instanceHasNotYetBeenCreated()){
+			createCommentServiceInstance();
+		}
+
+		return commentService;
+	}
+}
+```
+- In plain Java, we manually manage the instance to ensure **only one object** of the class is ever created
+##### 🔸 **Spring Singleton Using `@Bean`:**
+```java
+@Configuration
+public class ProjectConfig{
+
+	@Bean
+	public CommentService commentService1(){
+		return new CommentService();
+	}
+
+	@Bean
+	public CommentService commentService2(){
+		return new CommentService();
+	}
+}
+```
+- Spring allows you to define multiple singleton beans **of the same class**, each with its own bean ID
+- Even though they are of the same type, Spring treats them as **separate singleton beans**
+##### 🔸 **Spring Singleton Using Stereotype Annotations:**
+```java
+// CommentService.java
+
+package com.example.services;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+
+import com.example.repositories.CommentRepository;
+
+@Service
+public class CommentService {
+	@Autowired
+	private CommentRepository commentRepository;
+
+	public CommentRepository getCommentRepository(){
+		return commentRepository;
+	}
+}
+```
+
+```java
+// UserService.java
+package com.example.services;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Service;
+import com.example.repositories.CommentRepository;
+
+@Service
+public class UserService {
+    
+    @Autowired
+    private CommentRepository commentRepository;
+
+    public CommentRepository getCommentRepository() {
+        return commentRepository;
+    }
+}
+```
+
+```java
+// Main.java
+package com.example;
+import org.springframework.context.annotation.AnnotationConfigApplicationContext;
+import com.example.config.*;
+import com.example.services.*;
+
+public class Main {
+	public static void main(String[] args) {
+		var context = new AnnotationConfigApplicationContext(ProjectConfig.class);
+
+		var s1 = context.getBean(CommentService.class);
+		var s2 = context.getBean(UserService.class);
+
+		boolean b = s1.getCommentRepository() == s2.getCommentRepository();
+
+		System.out.println(b);
+	}
+}
+```
+- The Spring context is initialized using the configuration class
+- Both `CommentService` and `UserService` are automatically registered in the context using `@Service`
+- Spring automatically injects the same singleton instance of `CommentRepository` into both services using `@Autowired`
+- Since Spring uses **singleton scope by default**, both services share the **same repository instance**.
+- As a result, the comparison prints `true`, confirming that the dependency is shared
+
+### Prototype Scope
+
+#### Key Ideas:
+- A **prototype-scoped bean** tells Spring:
+	- “Create a **new instance** of this bean **every time** it’s requested from the context.”
+- We use it when:
+	- We want **a fresh object** every time (e.g. something with temporary state)
+    - We **don’t want to share** the same instance between different consumers
+- We can define prototype beans using **either `@Bean` or stereotype annotations** (`@Component`, `@Service`, etc.) along with `@Scope("prototype")`
+- For prototype beans, Spring doesn't create and manage an object instance directly
+- We no longer have concurrency problems because each thread that requests the bean gets a different instance so defining mutable prototype beans is not a problem
+
+##### When and Why we should use prototype-scoped beans in Spring
+- **Problem with Singleton for Mutable Objects**
+	- By default, Spring beans are **singleton** — one instance shared across the whole application.
+	- If the object **stores state internally (i.e., it's mutable)** and is **used by multiple threads**, this can cause problems (race conditions, unexpected behavior).
+- **Example:**
+	```java
+	@Component
+	public class CommentProcessor {
+	    private Comment comment;
+	
+	    public void setComment(Comment comment) {
+	        this.comment = comment;
+	    }
+	
+	    public void processComment() {
+	        // logic that changes comment
+	    }
+	
+	    public Comment getComment() {
+	        return this.comment;
+	    }
+	}
+	```
+	- If this `CommentProcessor` is a **singleton**, and two users/processes try to call `sendComment()` at the same time, they might overwrite each other’s comment! 
+- **Solution: Use Prototype Scope**
+	- If the `CommentProcessor`:
+		- Holds state (the `Comment`)
+		- Modifies that state inside its methods
+		- Needs a **fresh, independent instance** per use
+	- Then, we **make it a prototype bean**:
+		```java
+		@Component
+		@Scope(ConfigurableBeanFactory.SCOPE_PROTOTYPE)
+		public class CommentProcessor {
+		    @Autowired
+		    private CommentRepository commentRepository;
+		    // ... methods
+		}
+		```
+	- Now every time we **ask Spring for a CommentProcessor**, we get a **new object**.
+##### Injecting Prototypes into Singleton Beans
+- **The challenge:**
+	- Our `CommentService` is a singleton.
+	- If we inject the `CommentProcessor` into it **once** (like this):
+		```java
+		@Autowired
+		private CommentProcessor processor;
+	
+		```
+	- Then **only one processor** is created and reused. This is **not prototype behavior**.
+
+-  **Correct Approach**
+	- We **inject the Spring context itself** and **manually request a new bean inside the method**:
+	```java
+	@Service
+	public class CommentService {
+	    @Autowired
+	    private ApplicationContext context;
+	
+	    public void sendComment(Comment c) {
+	        CommentProcessor processor = context.getBean(CommentProcessor.class);
+	        processor.setComment(c);
+	        processor.processComment();
+	        processor.validateComment();
+	    }
+	}
+	```
+	- This way, **each call to `sendComment()` gets a fresh `CommentProcessor`**.
+	- You avoid race conditions.
+	- The object remains **mutable**, but safe.
+##### When Should You Use Prototype Beans?
+- Use **prototype scope**:
+	- When your bean holds **state/data that should not be shared**
+	- When you're working with **legacy/mutable components**
+	- When refactoring old applications that already rely on **mutable patterns**
+##### Avoid prototype scope if:
+- You can make your beans **stateless or immutable** 
+- Your app is heavily multithreaded (consider immutability instead)
+
+#### 💻 Code Snippet :
+##### 🔸 **Spring Prototype Using `@Bean`:**
+```java
+// CommentService.java
+@Service
+public class CommentService {
+    public CommentService(){
+        System.out.println("CommentService instance created!");
+    }
+}
+```
+
+```java
+// ProjectConfig.java
+@Configuration
+public class ProjectConfig {
+    @Bean
+    @Scope(BeanDefinition.SCOPE_PROTOTYPE)
+    public CommentService commentService(){
+        return new CommentService();
+    }
+}
+```
+
+```java
+// Main.java
+public class Main {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(ProjectConfig.class);
+    
+        var cs1 = context.getBean("commentService", CommentService.class);
+        var cs2 = context.getBean("commentService", CommentService.class);
+
+        boolean b = cs1 == cs2;
+
+        System.out.println(b);
+    }
+}
+
+// Output:
+// CommentService instance created!
+// CommentService instance created!
+// false
+```
+- We get a new bean every time we request it as `cs1` and `cs2` contain references to different instances
+- We add `@Scope(BeanDefinition.SCOPE_PROTOTYPE)` after `@Bean` annotation to make the bean prototype-scoped
+##### 🔸 **Spring Prototype Using Stereotype Annotations:**
+```java
+// CommentRepository.java
+@Repository
+@Scope(BeanDefinition.SCOPE_PROTOTYPE)
+public class CommentRepository {
+    
+}
+```
+
+```java
+// UserService.java
+@Service
+public class UserService {
+    @Autowired
+    private CommentRepository commentRepository;
+
+    public UserService(){
+        System.out.println("UserService instance created");
+    }
+
+    public CommentRepository getCommentRepository(){
+        return commentRepository;
+    }
+}
+```
+
+```java
+// CommentService.java
+@Service
+public class CommentService {
+
+    @Autowired
+    private CommentRepository commentRepository;
+
+    public CommentService(){
+        System.out.println("CommentService instance created");
+    }
+
+    public CommentRepository getCommentRepository(){
+        return commentRepository;
+    }
+
+}
+```
+
+```java
+// Main.java
+public class Main {
+    public static void main(String[] args) {
+        var context = new AnnotationConfigApplicationContext(ProjectConfig.class);
+    
+        var s1 = context.getBean("commentService", CommentService.class);
+        var s2 = context.getBean("userService", UserService.class);
+    
+        boolean b = s1.getCommentRepository() == s2.getCommentRepository();
+    
+        System.out.println(b);
+    }
+}
+
+// Output
+// CommentService instance created
+// UserService instance created
+// false
+```
+- `CommentRepository` is a prototype bean which is injected using `@Autowired` in two `Service` beans i.e. `CommentService` and `UserService`
+- Each service bean has a reference to a different instance of `CommentRepository`
+
